@@ -1,0 +1,38 @@
+{
+	"name": "mediawiki-extensions-integrated-profiles",
+	"version": "0.3.0",
+	"description": "Implements modern user profiles with the ability for other extensions to build on it.",
+	"private": true,
+	"scripts": {
+		"lint": "pnpm lint:js",
+		"lint:js": "eslint resources src"
+	},
+	"author": "ObbyWiki",
+	"license": "GPL-3.0-or-later",
+	"packageManager": "pnpm@10.12.1",
+	"devDependencies": {
+		"@eslint/eslintrc": "^3.3.6",
+		"@eslint/js": "^10.0.1",
+		"@typescript-eslint/eslint-plugin": "^8.68.0",
+		"@typescript-eslint/parser": "^8.68.0",
+		"eslint": "^10.9.1",
+		"eslint-config-wikimedia": "^0.32.4"
+	},
+	"overrides": {
+		"eslint": "$eslint",
+		"@typescript-eslint/eslint-plugin": "$@typescript-eslint/eslint-plugin",
+		"@typescript-eslint/parser": "$@typescript-eslint/parser"
+	},
+	"pnpm": {
+		"overrides": {
+			"@typescript-eslint/eslint-plugin": "^8.68.0",
+			"@typescript-eslint/parser": "^8.68.0"
+		},
+		"peerDependencyRules": {
+			"allowedVersions": {
+				"eslint": "*",
+				"typescript": "*"
+			}
+		}
+	}
+}
