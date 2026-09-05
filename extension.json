@@ -1,0 +1,74 @@
+{
+	"manifest_version": 2,
+	"name": "Swetrix",
+	"version": "0.0.0",
+	"author": [
+		"Wolfite",
+		"The Obby Wiki"
+	],
+	"url": "https://www.mediawiki.org/wiki/Extension:Swetrix",
+	"descriptionmsg": "swetrix-desc",
+	"license-name": "GPL-3.0-or-later",
+	"type": "other",
+	"requires": {
+		"MediaWiki": ">= 1.46.0"
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\Swetrix\\": "src/"
+	},
+	"HookHandlers": {
+		"main": {
+			"class": "MediaWiki\\Extension\\Swetrix\\Hooks",
+			"services": [
+				"MainConfig"
+			]
+		}
+	},
+	"Hooks": {
+		"BeforePageDisplay": "main"
+	},
+	"attributes": {
+		"GlobalPreferences": {
+			"AutoPrefs": [
+				"swetrix-dont-track"
+			]
+		}
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "resources",
+		"remoteExtPath": "Swetrix/resources"
+	},
+	"ResourceModules": {
+		"ext.swetrix": {
+			"scripts": [
+				"ext.swetrix.js"
+			]
+		}
+	},
+	"MessagesDirs": {
+		"Swetrix": [
+			"i18n"
+		]
+	},
+	"DefaultUserOptions": {
+		"swetrix-dont-track": 0
+	},
+	"config": {
+		"SwetrixProjectId": {
+			"value": "",
+			"description": "Swetrix project ID from the CE dashboard. Tracking is disabled when this is empty."
+		},
+		"SwetrixApiUrl": {
+			"value": "",
+			"description": "Swetrix log API URL (init apiURL). For CE use {BASE_URL}/backend/v1/log. Tracking is disabled when this is empty."
+		},
+		"SwetrixScriptUrl": {
+			"value": "https://swetrix.org/swetrix.js",
+			"description": "URL of the official Swetrix tracker script."
+		},
+		"SwetrixDevMode": {
+			"value": false,
+			"description": "When true, localhost page views are sent to the API (Swetrix init devMode)."
+		}
+	}
+}
