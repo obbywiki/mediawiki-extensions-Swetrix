@@ -1,12 +1,15 @@
 const config = mw.config.get( 'wgSwetrix' );
+
 if ( !config || !config.project_id || !config.api_url || !config.script_url ) { return; }
 
-function query_params() {
-	return new URLSearchParams( window.location.search );
-}
+const query_params = new URLSearchParams( window.location.search );
+const is_redlink = query_params.get( 'redlink' ) === '1';
 
-function is_redlink() {
-	return query_params().get( 'redlink' ) === '1';
+function current_action() {
+	const action = mw.config.get( 'wgAction' ) || query_params().get( 'action' ) || 'view';
+	if ( action === 'submit' ) { return 'edit.submit'; }
+
+	return action;
 }
 
 function is_404() {
@@ -19,31 +22,35 @@ function is_404() {
 	return article_id === 0 && typeof ns === 'number' && ns >= 0 && ( action === 'view' || action === 'history' );
 }
 
+function event_meta() {
+	const meta = { action: current_action() };
+	if ( is_redlink() ) { meta.redlink = '1'; }
+
+	return meta;
+}
+
 function pageview_payload( payload ) {
 	const page_name = mw.config.get( 'wgPageName' );
 	if ( page_name ) { payload.pg = '/' + page_name; }
 
-	const params = query_params();
-	const action = params.get( 'action' );
-	const meta = {};
-
-	if ( action ) { meta.action = action; }
-	if ( is_redlink() ) { meta.redlink = '1'; }
-
-	if ( Object.keys( meta ).length ) {
-		payload.meta = Object.assign( {}, payload.meta, meta );
-	}
-
+	payload.meta = Object.assign( {}, payload.meta, event_meta() );
 	return payload;
 }
 
 function track_404() {
 	if ( !is_404() ) { return; }
 
-	const event = { ev: '404' };
-	if ( is_redlink() ) { event.meta = { redlink: '1' }; }
-	
-	swetrix.track( event );
+	swetrix.track( {
+		ev: '404',
+		meta: event_meta()
+	} );
+}
+
+function track_action() {
+	swetrix.track( {
+		ev: 'action.' + current_action(),
+		meta: event_meta()
+	} );
 }
 
 mw.loader.getScript( config.script_url ).then( () => {
