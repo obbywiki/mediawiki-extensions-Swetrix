@@ -3,10 +3,19 @@
 namespace MediaWiki\Extension\Swetrix;
 
 use MediaWiki\Config\Config;
+use MediaWiki\Context\RequestContext;
+use MediaWiki\Hook\EditPageBeforeConflictDiffHook;
+use MediaWiki\Hook\EditPage__showEditForm_initialHook;
 use MediaWiki\Output\Hook\BeforePageDisplayHook;
 use MediaWiki\Output\OutputPage;
+use MediaWiki\Storage\Hook\PageSaveCompleteHook;
 
-class Hooks implements BeforePageDisplayHook {
+class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook, EditPageBeforeConflictDiffHook, PageSaveCompleteHook {
+
+	private const SESSION_EDIT_SAVE = 'swetrix-edit-save';
+
+	/** @var string[] */
+	private array $edit_events = [];
 
 	public function __construct(
 		private readonly Config $config
@@ -35,9 +44,85 @@ class Hooks implements BeforePageDisplayHook {
 			'api_url' => $api_url,
 			'script_url' => $script_url,
 			'dev_mode' => $dev_mode,
-			'is_404' => $this->is_not_found( $out )
+			'is_404' => $this->is_not_found( $out ),
+			'edit_events' => $this->edit_events_for_page( $out )
 		] );
 		$out->addModules( [ 'ext.swetrix' ] );
+	}
+
+	/**
+	 * @inheritDoc
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/EditPage::showEditForm:initial
+	 */
+	public function onEditPage__showEditForm_initial( $editor, $out ): void {
+		if ( !$this->tracking_enabled() ) {
+			return;
+		}
+
+		if ( $editor->isConflict ) {
+			return;
+		}
+
+		if ( ( $editor->formtype ?? '' ) !== 'initial' ) {
+			return;
+		}
+
+		$this->edit_events[] = 'start';
+	}
+
+	/**
+	 * @inheritDoc
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/EditPageBeforeConflictDiff
+	 */
+	public function onEditPageBeforeConflictDiff( $editor, $out ): void {
+		if ( !$this->tracking_enabled() ) {
+			return;
+		}
+
+		$this->edit_events[] = 'conflict';
+	}
+
+	/**
+	 * @inheritDoc
+	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/PageSaveComplete
+	 */
+	public function onPageSaveComplete( $wiki_page, $user, $summary, $flags, $revision_record, $edit_result ): void {
+		if ( !$this->tracking_enabled() ) {
+			return;
+		}
+
+		if ( $edit_result->isNullEdit() ) {
+			return;
+		}
+
+		if ( defined( 'MW_ENTRY_POINT' ) && MW_ENTRY_POINT !== 'index' ) {
+			return;
+		}
+
+		$session = RequestContext::getMain()->getRequest()->getSession();
+		$session->set( self::SESSION_EDIT_SAVE, 1 );
+		$session->persist();
+	}
+
+	private function tracking_enabled(): bool {
+		return (string)$this->config->get( 'SwetrixProjectId' ) !== '' && (string)$this->config->get( 'SwetrixApiUrl' ) !== '';
+	}
+
+	/** @return string[] */
+	private function edit_events_for_page( OutputPage $out ): array {
+		$edit_events = $this->edit_events;
+
+		if ( $out->getRedirect() !== '' ) {
+			return array_values( array_unique( $edit_events ) );
+		}
+
+		$session = $out->getRequest()->getSession();
+		if ( $session->get( self::SESSION_EDIT_SAVE ) ) {
+			$session->remove( self::SESSION_EDIT_SAVE );
+			$edit_events[] = 'save';
+		}
+
+		return array_values( array_unique( $edit_events ) );
 	}
 
 	private function is_missing_article( OutputPage $out ): bool {

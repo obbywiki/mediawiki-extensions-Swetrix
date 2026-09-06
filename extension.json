@@ -25,7 +25,10 @@
 		}
 	},
 	"Hooks": {
-		"BeforePageDisplay": "main"
+		"BeforePageDisplay": "main",
+		"EditPage::showEditForm:initial": "main",
+		"PageSaveComplete": "main",
+		"EditPageBeforeConflictDiff": "main"
 	},
 	"attributes": {
 		"GlobalPreferences": {
