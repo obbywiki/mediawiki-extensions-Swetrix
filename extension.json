@@ -90,6 +90,10 @@
 		"SwetrixNetworkDomains": {
 			"value": [],
 			"description": "Hostnames treated as the wiki network (e.g. sister sites). Matching hosts and their subdomains fire link.network.click instead of link.outbound.click."
+		},
+		"SwetrixTrackErrors": {
+			"value": true,
+			"description": "When true, uncaught errors will be tracked by Swetrix."
 		}
 	}
 }

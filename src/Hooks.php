@@ -59,7 +59,8 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 			'edit_events' => $this->edit_events_for_page( $out ),
 			'track_outbound_clicks' => (bool)$this->config->get( 'SwetrixTrackOutboundClicks' ),
 			'track_network_clicks' => (bool)$this->config->get( 'SwetrixTrackNetworkClicks' ),
-			'network_domains' => $this->network_domains()
+			'network_domains' => $this->network_domains(),
+			'track_errors' => (bool)$this->config->get( 'SwetrixTrackErrors' ),
 		] );
 		$out->addModules( [ 'ext.swetrix' ] );
 	}

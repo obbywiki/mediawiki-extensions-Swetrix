@@ -211,6 +211,8 @@ function bind_link_clicks() {
 	document.addEventListener( 'auxclick', on_link_click, true );
 }
 
+const track_errors = !!config.track_errors;
+
 mw.loader.getScript( config.script_url ).then( () => {
 	swetrix.init( config.project_id, {
 		apiURL: config.api_url,
@@ -220,6 +222,10 @@ mw.loader.getScript( config.script_url ).then( () => {
 	swetrix.trackViews( {
 		callback: pageview_payload
 	} );
+
+	if ( track_errors ) {
+		swetrix.trackErrors();
+	}
 
 	track_action();
 	track_php_edit_events();
