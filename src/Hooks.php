@@ -8,9 +8,13 @@ use MediaWiki\Hook\EditPageBeforeConflictDiffHook;
 use MediaWiki\Hook\EditPage__showEditForm_initialHook;
 use MediaWiki\Output\Hook\BeforePageDisplayHook;
 use MediaWiki\Output\OutputPage;
+use MediaWiki\Preferences\Hook\GetPreferencesHook;
+use MediaWiki\Request\WebRequest;
 use MediaWiki\Storage\Hook\PageSaveCompleteHook;
+use MediaWiki\User\Options\UserOptionsLookup;
+use MediaWiki\User\UserIdentity;
 
-class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook, EditPageBeforeConflictDiffHook, PageSaveCompleteHook {
+class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook, EditPageBeforeConflictDiffHook, GetPreferencesHook, PageSaveCompleteHook {
 
 	private const SESSION_EDIT_SAVE = 'swetrix-edit-save';
 
@@ -18,7 +22,8 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 	private array $edit_events = [];
 
 	public function __construct(
-		private readonly Config $config
+		private readonly Config $config,
+		private readonly UserOptionsLookup $user_options_lookup
 	) {
 	}
 
@@ -28,14 +33,19 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 		$api_url = (string)$this->config->get( 'SwetrixApiUrl' );
 		$script_url = (string)$this->config->get( 'SwetrixScriptUrl' );
 		$dev_mode = (bool)$this->config->get( 'SwetrixDevMode' );
+		$honor_dnt = (bool)$this->config->get( 'SwetrixHonorDNT' );
 
 		if ( $project_id === '' || $api_url === '' ) {
 			return;
 		}
 
-		// if ( $out->getUser()->getOption( 'swetrix-dont-track' ) ) {
-		// 	return;
-		// }
+		if ( $honor_dnt ) {
+			$out->addVaryHeader( 'DNT' );
+		}
+
+		if ( !$this->tracking_enabled( $out->getUser(), $out->getRequest() ) ) {
+			return;
+		}
 
 		$this->allowCspHosts( $out, $script_url, $api_url );
 
@@ -44,10 +54,28 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 			'api_url' => $api_url,
 			'script_url' => $script_url,
 			'dev_mode' => $dev_mode,
+			'honor_dnt' => $honor_dnt,
 			'is_404' => $this->is_not_found( $out ),
-			'edit_events' => $this->edit_events_for_page( $out )
+			'edit_events' => $this->edit_events_for_page( $out ),
+			'track_outbound_clicks' => (bool)$this->config->get( 'SwetrixTrackOutboundClicks' ),
+			'track_network_clicks' => (bool)$this->config->get( 'SwetrixTrackNetworkClicks' ),
+			'network_domains' => $this->network_domains()
 		] );
 		$out->addModules( [ 'ext.swetrix' ] );
+	}
+
+	/** @inheritDoc */
+	public function onGetPreferences( $user, &$preferences ): void {
+		if ( (string)$this->config->get( 'SwetrixProjectId' ) === '' || (string)$this->config->get( 'SwetrixApiUrl' ) === '' ) {
+			return;
+		}
+
+		$preferences['swetrix-dont-track'] = [
+			'type' => 'toggle',
+			'label-message' => 'tog-swetrix-dont-track',
+			'help-message' => 'tog-swetrix-dont-track-help',
+			'section' => 'rendering/advancedrendering'
+		];
 	}
 
 	/**
@@ -55,7 +83,7 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/EditPage::showEditForm:initial
 	 */
 	public function onEditPage__showEditForm_initial( $editor, $out ): void {
-		if ( !$this->tracking_enabled() ) {
+		if ( !$this->tracking_enabled( $out->getUser(), $out->getRequest() ) ) {
 			return;
 		}
 
@@ -75,7 +103,7 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/EditPageBeforeConflictDiff
 	 */
 	public function onEditPageBeforeConflictDiff( $editor, $out ): void {
-		if ( !$this->tracking_enabled() ) {
+		if ( !$this->tracking_enabled( $out->getUser(), $out->getRequest() ) ) {
 			return;
 		}
 
@@ -87,7 +115,7 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 	 * @see https://www.mediawiki.org/wiki/Manual:Hooks/PageSaveComplete
 	 */
 	public function onPageSaveComplete( $wiki_page, $user, $summary, $flags, $revision_record, $edit_result ): void {
-		if ( !$this->tracking_enabled() ) {
+		if ( !$this->tracking_enabled( $user ) ) {
 			return;
 		}
 
@@ -104,8 +132,70 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 		$session->persist();
 	}
 
-	private function tracking_enabled(): bool {
-		return (string)$this->config->get( 'SwetrixProjectId' ) !== '' && (string)$this->config->get( 'SwetrixApiUrl' ) !== '';
+	private function tracking_enabled( ?UserIdentity $user = null, ?WebRequest $request = null ): bool {
+		if ( (string)$this->config->get( 'SwetrixProjectId' ) === '' || (string)$this->config->get( 'SwetrixApiUrl' ) === '' ) {
+			return false;
+		}
+
+		$user ??= RequestContext::getMain()->getUser();
+		if ( $this->user_options_lookup->getBoolOption( $user, 'swetrix-dont-track' ) ) {
+			return false;
+		}
+
+		if ( !(bool)$this->config->get( 'SwetrixHonorDNT' ) ) {
+			return true;
+		}
+
+		$request ??= RequestContext::getMain()->getRequest();
+		return !$this->dnt_requested( $request );
+	}
+
+	private function dnt_requested( WebRequest $request ): bool {
+		return trim( (string)$request->getHeader( 'DNT' ) ) === '1';
+	}
+
+	/** @return string[] */
+	private function network_domains(): array {
+		$raw = $this->config->get( 'SwetrixNetworkDomains' );
+		if ( !is_array( $raw ) ) {
+			return [];
+		}
+
+		$domains = [];
+		foreach ( $raw as $value ) {
+			$host = $this->host_from_domain_setting( (string)$value );
+			if ( $host !== null ) {
+				$domains[] = $host;
+			}
+		}
+
+		return array_values( array_unique( $domains ) );
+	}
+
+	private function host_from_domain_setting( string $value ): ?string {
+		$value = strtolower( trim( $value ) );
+		if ( $value === '' ) {
+			return null;
+		}
+
+		if ( str_contains( $value, '://' ) ) {
+			$host = parse_url( $value, PHP_URL_HOST );
+		} elseif ( str_contains( $value, '/' ) ) {
+			$host = parse_url( 'https://' . $value, PHP_URL_HOST );
+		} else {
+			$host = $value;
+		}
+
+		if ( !is_string( $host ) || $host === '' ) {
+			return null;
+		}
+
+		$host = rtrim( $host, '.' );
+		if ( str_starts_with( $host, '*.' ) ) {
+			$host = substr( $host, 2 );
+		}
+
+		return $host === '' ? null : $host;
 	}
 
 	/** @return string[] */

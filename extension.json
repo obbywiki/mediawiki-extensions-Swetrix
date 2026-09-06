@@ -20,13 +20,15 @@
 		"main": {
 			"class": "MediaWiki\\Extension\\Swetrix\\Hooks",
 			"services": [
-				"MainConfig"
+				"MainConfig",
+				"UserOptionsLookup"
 			]
 		}
 	},
 	"Hooks": {
 		"BeforePageDisplay": "main",
 		"EditPage::showEditForm:initial": "main",
+		"GetPreferences": "main",
 		"PageSaveComplete": "main",
 		"EditPageBeforeConflictDiff": "main"
 	},
@@ -72,6 +74,22 @@
 		"SwetrixDevMode": {
 			"value": false,
 			"description": "When true, localhost page views are sent to the API (Swetrix init devMode)."
+		},
+		"SwetrixHonorDNT": {
+			"value": true,
+			"description": "When true, tracking is disabled for requests that send the DNT (Do Not Track) header."
+		},
+		"SwetrixTrackOutboundClicks": {
+			"value": true,
+			"description": "When true, clicks on external links that are not network domains fire link.outbound.click."
+		},
+		"SwetrixTrackNetworkClicks": {
+			"value": true,
+			"description": "When true, clicks on links whose host is in $wgSwetrixNetworkDomains fire link.network.click."
+		},
+		"SwetrixNetworkDomains": {
+			"value": [],
+			"description": "Hostnames treated as the wiki network (e.g. sister sites). Matching hosts and their subdomains fire link.network.click instead of link.outbound.click."
 		}
 	}
 }

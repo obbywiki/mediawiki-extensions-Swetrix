@@ -5,5 +5,7 @@
 			"The Obby Wiki"
 		]
 	},
-	"swetrix-desc": "{{desc|name=Swetrix|url=https://www.mediawiki.org/wiki/Extension:Swetrix}}"
+	"swetrix-desc": "{{desc|name=Swetrix|url=https://www.mediawiki.org/wiki/Extension:Swetrix}}",
+	"tog-swetrix-dont-track": "Label for a user preference toggle that opts the user out of Swetrix analytics tracking.",
+	"tog-swetrix-dont-track-help": "Help text for the preference that disables Swetrix analytics tracking."
 }

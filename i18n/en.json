@@ -5,5 +5,7 @@
 			"The Obby Wiki"
 		]
 	},
-	"swetrix-desc": "Implements Swetrix for MediaWiki."
+	"swetrix-desc": "Implements Swetrix for MediaWiki.",
+	"tog-swetrix-dont-track": "Do not send my visits to Swetrix",
+	"tog-swetrix-dont-track-help": "When selected, page views and events from your account are not sent to Swetrix analytics."
 }
