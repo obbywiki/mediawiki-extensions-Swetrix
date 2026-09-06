@@ -34,9 +34,32 @@ class Hooks implements BeforePageDisplayHook {
 			'project_id' => $project_id,
 			'api_url' => $api_url,
 			'script_url' => $script_url,
-			'dev_mode' => $dev_mode
+			'dev_mode' => $dev_mode,
+			'is_404' => $this->is_not_found( $out )
 		] );
 		$out->addModules( [ 'ext.swetrix' ] );
+	}
+
+	private function is_missing_article( OutputPage $out ): bool {
+		$title = $out->getTitle();
+		return $title !== null && !$title->isSpecialPage() && !$title->exists();
+	}
+
+	private function is_not_found( OutputPage $out ): bool {
+		if ( http_response_code() === 404 ) {
+			return true;
+		}
+
+		if ( !$this->is_missing_article( $out ) ) {
+			return false;
+		}
+
+		if ( $out->getRequest()->getBool( 'redlink' ) ) {
+			return true;
+		}
+
+		$action = $out->getActionName();
+		return $action === 'view' || $action === 'history';
 	}
 
 	private function allowCspHosts( OutputPage $out, string $script_url, string $api_url ): void {
