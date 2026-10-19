@@ -45,8 +45,27 @@
 	},
 	"ResourceModules": {
 		"ext.swetrix": {
+			"dependencies": [
+				"ext.swetrix.client"
+			],
 			"scripts": [
 				"ext.swetrix.js"
+			]
+		},
+		"ext.swetrix.client": {
+			"packageFiles": [
+				"ext.swetrix.client.js"
+			],
+			"dependencies": [
+				"mediawiki.user"
+			]
+		},
+		"ext.swetrix.flags": {
+			"packageFiles": [
+				"ext.swetrix.flags.js"
+			],
+			"dependencies": [
+				"ext.swetrix.client"
 			]
 		}
 	},
@@ -59,6 +78,10 @@
 		"swetrix-dont-track": 0
 	},
 	"config": {
+		"SwetrixFeatureFlags": {
+			"value": false,
+			"description": "Enable the opt-in browser feature flag API for other extensions."
+		},
 		"SwetrixProjectId": {
 			"value": "",
 			"description": "Swetrix project ID from the CE dashboard. Tracking is disabled when this is empty."

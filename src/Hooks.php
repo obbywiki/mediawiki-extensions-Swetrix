@@ -55,6 +55,7 @@ class Hooks implements BeforePageDisplayHook, EditPage__showEditForm_initialHook
 			'script_url' => $script_url,
 			'dev_mode' => $dev_mode,
 			'honor_dnt' => $honor_dnt,
+			'feature_flags' => (bool)$this->config->get( 'SwetrixFeatureFlags' ),
 			'is_404' => $this->is_not_found( $out ),
 			'edit_events' => $this->edit_events_for_page( $out ),
 			'track_outbound_clicks' => (bool)$this->config->get( 'SwetrixTrackOutboundClicks' ),

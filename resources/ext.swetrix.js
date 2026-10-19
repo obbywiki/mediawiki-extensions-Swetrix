@@ -212,12 +212,11 @@ function bind_link_clicks() {
 }
 
 const track_errors = !!config.track_errors;
+let swetrix;
 
-mw.loader.getScript( config.script_url ).then( () => {
-	swetrix.init( config.project_id, {
-		apiURL: config.api_url,
-		devMode: !!config.dev_mode
-	} );
+require( 'ext.swetrix.client' ).getClient().then( ( client ) => {
+	if ( !client ) { return; }
+	swetrix = client;
 
 	swetrix.trackViews( {
 		callback: pageview_payload
